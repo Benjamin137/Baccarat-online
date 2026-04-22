@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baccarat Multijugador</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="login-screen">
+        <h2>Bienvenido al Baccarat</h2>
+        <input type="text" id="username" placeholder="Ingresa tu nombre">
+        <button onclick="joinGame()">Entrar a la Mesa</button>
+    </div>
+
+    <div id="game-screen" style="display: none;">
+        <header>
+            <div>Jugador: <span id="myName"></span></div>
+            <div>Saldo: $<span id="myBalance">1000</span></div>
+            <div>Estado: <span id="status-msg">Conectando...</span></div>
+            <div>Tiempo: <span id="timer">0</span>s</div>
+        </header>
+        
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span>Apostando al Jugador:</span>
+                <div class="progress-bg">
+                    <div id="bar-player" class="progress-fill player-color" style="width: 0%"></div>
+                </div>
+                <span id="txt-player-pct">0%</span>
+            </div>
+            <div class="stat-item">
+                <span>Apostando a la Banca:</span>
+                <div class="progress-bg">
+                    <div id="bar-banker" class="progress-fill banker-color" style="width: 0%"></div>
+                </div>
+                <span id="txt-banker-pct">0%</span>
+            </div>
+        </div>
+
+        <main class="table">
+            <div class="history-container">
+                <h4>Historial de Resultados (Últimos 20)</h4>
+                <div id="roadmap" class="roadmap-grid"></div>
+            </div>
+        </main>
+
+        <main class="table">
+            <div class="cards-area">
+                <div class="hand">
+                    <h3>JUGADOR (<span id="player-score">0</span>)</h3>
+                    <div id="player-cards" class="cards"></div>
+                </div>
+                <div class="hand">
+                    <h3>BANCA (<span id="banker-score">0</span>)</h3>
+                    <div id="banker-cards" class="cards"></div>
+                </div>
+            </div>
+
+            <div class="bet-controls">
+                <label for="betAmount">Cantidad a apostar: $</label>
+                <input type="number" id="betAmount" value="10" min="1" step="1">
+            </div>
+
+            <div class="betting-area">
+                <button onclick="placeBet('Jugador')" class="btn-bet">Apostar Jugador</button>
+                <button onclick="placeBet('Empate')" class="btn-bet tie">Apostar Empate</button>
+                <button onclick="placeBet('Banca')" class="btn-bet">Apostar Banca</button>
+            </div>
+        </main>
+
+        <div class="sidebar">
+            <h3>Jugadores</h3>
+            <ul id="players-list"></ul>
+
+            <h3>Apuestas</h3>
+            <ul id="bets-list" class="scroll-list"></ul>
+
+            <h3>Chat</h3>
+            <div class="chat-container">
+                <div id="chat-messages"></div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Escribe un mensaje...">
+                    <button onclick="sendMessage()">Enviar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h3>Jugadores Conectados</h3>
+            <ul id="players-list"></ul>
+            <h3>Apuestas Actuales</h3>
+            <ul id="bets-list"></ul>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+
+</html>

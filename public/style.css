@@ -1,0 +1,220 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #2c3e50;
+    color: white;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+#login-screen {
+    background: #34495e;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+#login-screen input {
+    padding: 10px;
+    margin: 10px 0;
+    width: 80%;
+}
+
+#login-screen button {
+    padding: 10px 20px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+#game-screen {
+    width: 90%;
+    max-width: 1000px;
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 20px;
+}
+
+header {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    background: #1a252f;
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.table {
+    background: #27ae60;
+    border-radius: 15px;
+    padding: 20px;
+    border: 5px solid #2ecc71;
+}
+
+.cards-area {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.cards {
+    display: flex;
+    gap: 10px;
+    min-height: 100px;
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.card {
+    background: white;
+    color: black;
+    width: 50px;
+    height: 70px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.red { color: red; }
+
+.betting-area {
+    display: flex;
+    justify-content: space-around;
+}
+
+.btn-bet {
+    padding: 15px 20px;
+    font-size: 1em;
+    background: #2980b9;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.btn-bet.tie { background: #8e44ad; }
+
+.sidebar {
+    background: #34495e;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+ul { list-style: none; padding: 0; }
+li { margin-bottom: 5px; border-bottom: 1px solid #455a64; padding-bottom: 5px;}
+
+/* Nuevos estilos para apuestas y chat */
+
+.bet-controls {
+    text-align: center;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.bet-controls input {
+    padding: 8px;
+    font-size: 1em;
+    width: 80px;
+    border-radius: 5px;
+    border: none;
+    text-align: center;
+}
+
+.scroll-list {
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+.chat-container {
+    background: #2c3e50;
+    border-radius: 5px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+#chat-messages {
+    height: 150px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+#chat-messages div {
+    margin-bottom: 5px;
+    word-wrap: break-word;
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 5px;
+}
+
+.chat-input-area input {
+    flex-grow: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 3px;
+}
+
+.chat-input-area button {
+    padding: 8px 12px;
+    background: #e67e22;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+/* Estadísticas de porcentajes */
+.stats-bar {
+    display: flex;
+    justify-content: space-around;
+    background: #1a252f;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+.stat-item { display: flex; align-items: center; gap: 10px; flex: 1; justify-content: center; }
+
+.progress-bg { width: 100px; height: 10px; background: #444; border-radius: 5px; overflow: hidden; }
+.progress-fill { height: 100%; transition: width 0.5s ease; }
+.player-color { background: #2980b9; }
+.banker-color { background: #c0392b; }
+
+/* Historial / Roadmap */
+.history-container {
+    margin-top: 20px;
+    background: rgba(0,0,0,0.3);
+    padding: 10px;
+    border-radius: 8px;
+}
+.roadmap-grid {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.history-dot {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.7em;
+    font-weight: bold;
+    color: white;
+}
+.dot-jugador { background: #2980b9; }
+.dot-banca { background: #c0392b; }
+.dot-empate { background: #8e44ad; }
