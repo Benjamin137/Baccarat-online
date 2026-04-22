@@ -145,7 +145,7 @@ io.on('connection', (socket) => {
 // ... (resto del código igual)
 
 // Escuchar en 0.0.0.0 permite conexiones desde la red local
-const PORT = 3000;
+const PORT = 2000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
     console.log(`Para acceder desde otro dispositivo usa la IP de tu PC, ej: http://192.168.x.x:${PORT}`);
