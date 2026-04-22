@@ -1,10 +1,28 @@
 import { useState } from "react";
-import { Card } from "./components/Card.jsx";
+import { Card } from "./components/Card";
 import { BettingChips } from "./components/BettingChips";
 import { GameHistory } from "./components/GameHistory";
 import { Chat } from "./components/Chat";
 import { motion } from "motion/react";
 import { Trophy, RotateCcw } from "lucide-react";
+
+interface CardType {
+  suit: 'hearts' | 'diamonds' | 'clubs' | 'spades';
+  value: string;
+  numericValue: number;
+}
+
+interface HistoryItem {
+  winner: 'PUNTO' | 'BANCA' | 'TIE';
+  round: number;
+}
+
+interface Message {
+  id: number;
+  user: string;
+  text: string;
+  timestamp: Date;
+}
 
 export default function App() {
   const [balance, setBalance] = useState(1000);
@@ -12,20 +30,20 @@ export default function App() {
   const [puntoBet, setPuntoBet] = useState(0);
   const [bancaBet, setBancaBet] = useState(0);
   const [tieBet, setTieBet] = useState(0);
-  const [puntoCards, setPuntoCards] = useState([]);
-  const [bancaCards, setBancaCards] = useState([]);
-  const [gameState, setGameState] = useState('betting'); // 'betting' | 'dealing' | 'result'
-  const [winner, setWinner] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [messages, setMessages] = useState([
+  const [puntoCards, setPuntoCards] = useState<CardType[]>([]);
+  const [bancaCards, setBancaCards] = useState<CardType[]>([]);
+  const [gameState, setGameState] = useState<'betting' | 'dealing' | 'result'>('betting');
+  const [winner, setWinner] = useState<'PUNTO' | 'BANCA' | 'TIE' | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
     { id: 1, user: 'Sistema', text: '¡Bienvenido al Baccarat!', timestamp: new Date() }
   ]);
   const [roundNumber, setRoundNumber] = useState(1);
 
-  const createDeck = () => {
-    const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+  const createDeck = (): CardType[] => {
+    const suits: ('hearts' | 'diamonds' | 'clubs' | 'spades')[] = ['hearts', 'diamonds', 'clubs', 'spades'];
     const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const deck = [];
+    const deck: CardType[] = [];
 
     for (const suit of suits) {
       for (let i = 0; i < values.length; i++) {
@@ -38,7 +56,7 @@ export default function App() {
     return deck;
   };
 
-  const shuffleDeck = (deck) => {
+  const shuffleDeck = (deck: CardType[]): CardType[] => {
     const shuffled = [...deck];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -47,12 +65,12 @@ export default function App() {
     return shuffled;
   };
 
-  const calculateScore = (cards) => {
+  const calculateScore = (cards: CardType[]): number => {
     const total = cards.reduce((sum, card) => sum + card.numericValue, 0);
     return total % 10;
   };
 
-  const placeBet = (type) => {
+  const placeBet = (type: 'punto' | 'banca' | 'tie') => {
     if (gameState !== 'betting') return;
     if (balance < selectedChip) return;
 
@@ -87,7 +105,7 @@ export default function App() {
       const puntoScore = calculateScore(puntoHand);
       const bancaScore = calculateScore(bancaHand);
 
-      let gameWinner;
+      let gameWinner: 'PUNTO' | 'BANCA' | 'TIE';
       let winnings = 0;
 
       if (puntoScore > bancaScore) {
@@ -98,16 +116,16 @@ export default function App() {
         winnings = bancaBet * 1.95;
       } else {
         gameWinner = 'TIE';
-        winnings = (tieBet * 8) + puntoBet + bancaBet;
+        winnings = tieBet * 8 + puntoBet + bancaBet;
       }
 
       setWinner(gameWinner);
-      setBalance(prevBalance => prevBalance + winnings);
+      setBalance(balance + winnings);
       setGameState('result');
 
       setHistory([...history, { winner: gameWinner, round: roundNumber }]);
-      setMessages(prevMessages => [...prevMessages, {
-        id: prevMessages.length + 1,
+      setMessages([...messages, {
+        id: messages.length + 1,
         user: 'Sistema',
         text: `¡${gameWinner} gana! Punto: ${puntoScore} - Banca: ${bancaScore}`,
         timestamp: new Date()
@@ -126,7 +144,7 @@ export default function App() {
     setRoundNumber(roundNumber + 1);
   };
 
-  const handleSendMessage = (text) => {
+  const handleSendMessage = (text: string) => {
     setMessages([...messages, {
       id: messages.length + 1,
       user: 'Jugador',
@@ -148,7 +166,7 @@ export default function App() {
           </div>
           <div className="text-right">
             <p className="text-gray-400 text-sm">Balance</p>
-            <p className="text-yellow-400 text-2xl font-bold">${balance.toFixed(2)}</p>
+            <p className="text-yellow-400 text-2xl font-bold">${balance}</p>
           </div>
         </div>
 
