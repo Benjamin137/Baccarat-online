@@ -1,0 +1,34 @@
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./server:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - PORT=3000
+    networks:
+      - baccarat-network
+
+  frontend:
+    build:
+      context: ./public
+      dockerfile: Dockerfile
+    ports:
+      - "2000:2000"
+    volumes:
+      - ./public:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - VITE_PORT=2000
+    networks:
+      - baccarat-network
+    depends_on:
+      - backend
+
+networks:
+  baccarat-network:
+    driver: bridge
