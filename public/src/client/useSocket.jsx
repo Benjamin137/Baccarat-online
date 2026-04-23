@@ -4,6 +4,7 @@ import { socket } from './socketInstance';
 export const useSocket = () => {
 
     const [chatMessages, setChatMessages] = useState([]);
+    const [usersOnline, setUsersOnline] = useState(0);
 
     useEffect(() => {
 
@@ -13,8 +14,14 @@ export const useSocket = () => {
             }
         });
 
+
+        socket.on('usersOnline', (count) => {
+            setUsersOnline(count);
+        });
+
         return () => {
             socket.off('chatMessage');
+            socket.off('usersOnline');
         };
 
     }, []);
@@ -31,10 +38,13 @@ export const useSocket = () => {
         }
     };
 
+
+
     return {
         conectar,
         socket,
         chatMessages,
-        sendMessageChat
+        sendMessageChat,
+        usersOnline
     };
 };

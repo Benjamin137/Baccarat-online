@@ -10,7 +10,7 @@ import {useSocket} from './client/useSocket.jsx';
 
 export default function App() {
 
-  const { conectar } = useSocket();
+  const { conectar, usersOnline } = useSocket();
 
 
   // Estados de Juego
@@ -188,7 +188,11 @@ export default function App() {
             
             {/* TAPETE */}
             <div className="flex-1 bg-green-700/40 border-2 border-green-600/30 rounded-[2.5rem] p-4 flex flex-col justify-around items-center relative overflow-hidden shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]">
-              
+            {/*Contador de usuarios en línea*/}
+              <div className="absolute top-4 right-4 bg-gray-800/50 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                <span className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></span>
+                {`En línea: ${usersOnline}`}
+              </div>
               {/* Banca */}
               <div className="w-full text-center">
                 <div className="flex items-center justify-center gap-4 mb-4">

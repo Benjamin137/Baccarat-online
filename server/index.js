@@ -21,6 +21,7 @@ let players = {};
 let bets = {}; // Formato: { socketId: { type: 'Jugador', amount: 100 } }
 let gameState = 'WAITING'; // WAITING, PLAYING, RESULTS
 let countdown = 15;
+let usersOnline = 0;
 
 // Ciclo principal del juego
 setInterval(() => {
@@ -81,7 +82,8 @@ function getBettingStats() {
 // Manejo de conexiones de clientes
 io.on('connection', (socket) => {
     console.log('Nuevo jugador conectado:', socket.id);
-
+    usersOnline++;
+    io.emit('usersOnline', usersOnline);
     // Registro del jugador
     socket.on('join', (username) => {
         players[socket.id] = { username, balance: 1000 };
@@ -145,6 +147,8 @@ io.on('connection', (socket) => {
         io.emit('playerList', Object.values(players));
         console.log('Jugador desconectado:', socket.id);
         io.emit('statsUpdate', getBettingStats());
+        usersOnline--;
+        io.emit('usersOnline', usersOnline);
     });
 });
 
