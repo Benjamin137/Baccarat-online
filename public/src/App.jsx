@@ -1,21 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./components/Card.jsx";
 import { BettingChips } from "./components/BettingChips.jsx";
 import { GameHistory } from "./components/GameHistory.jsx";
 import { Chat } from "./components/Chat.jsx";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Trophy, RotateCcw } from "lucide-react";
-import { conectarSocket, unirse } from './client/controller.jsx';
+import {useSocket} from './client/useSocket.jsx';
 
 
 export default function App() {
 
-  conectarSocket();
+  const { conectar } = useSocket();
 
-  setTimeout(() => {
-    unirse('Benjamin');
-  }, 1000);
 
+  // Estados de Juego
   const [balance, setBalance] = useState(1000);
   const [selectedChip, setSelectedChip] = useState(5);
   const [puntoBet, setPuntoBet] = useState(0);
@@ -23,28 +21,32 @@ export default function App() {
   const [tieBet, setTieBet] = useState(0);
   const [puntoCards, setPuntoCards] = useState([]);
   const [bancaCards, setBancaCards] = useState([]);
-  const [gameState, setGameState] = useState('betting'); // 'betting' | 'dealing' | 'result'
+  const [gameState, setGameState] = useState('betting'); 
   const [winner, setWinner] = useState(null);
   const [history, setHistory] = useState([]);
   const [messages, setMessages] = useState([
-    { id: 1, user: 'Sistema', text: '¡Bienvenido al Baccarat!', timestamp: new Date() }
+    { id: 1, user: 'Sistema', text: 'Mazo de 6 barajas listo.', timestamp: new Date() }
   ]);
   const [roundNumber, setRoundNumber] = useState(1);
+  const [shoe, setShoe] = useState([]); // El "Sabot" de 6 barajas
 
-  const createDeck = () => {
+  // --- LÓGICA DE CASINO (6 Barajas) ---
+  const initShoe = () => {
     const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
     const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const deck = [];
-
-    for (const suit of suits) {
-      for (let i = 0; i < values.length; i++) {
-        const value = values[i];
-        let numericValue = i + 1;
-        if (numericValue > 9) numericValue = 0;
-        deck.push({ suit, value, numericValue });
+    let newShoe = [];
+    
+    for (let s = 0; s < 6; s++) { // 6 barajas
+      for (const suit of suits) {
+        for (let i = 0; i < values.length; i++) {
+          let numericValue = i + 1;
+          if (numericValue >= 10) numericValue = 0; // 10, J, Q, K valen 0
+          if (values[i] === 'A') numericValue = 1;
+          newShoe.push({ suit, value: values[i], numericValue });
+        }
       }
     }
-    return deck;
+    return shuffleDeck(newShoe);
   };
 
   const shuffleDeck = (deck) => {
@@ -56,26 +58,33 @@ export default function App() {
     return shuffled;
   };
 
+  // Cargar mazo inicial
+  useEffect(() => {
+    setShoe(initShoe());
+      conectar(); // Conectar al socket al montar el componente
+  }, []);
+
   const calculateScore = (cards) => {
     const total = cards.reduce((sum, card) => sum + card.numericValue, 0);
     return total % 10;
   };
 
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
   const placeBet = (type) => {
     if (gameState !== 'betting') return;
     if (balance < selectedChip) return;
-
     setBalance(balance - selectedChip);
-
     if (type === 'punto') setPuntoBet(puntoBet + selectedChip);
     if (type === 'banca') setBancaBet(bancaBet + selectedChip);
     if (type === 'tie') setTieBet(tieBet + selectedChip);
   };
 
-  const dealCards = () => {
+  // --- REPARTO ASÍNCRONO (UNA POR UNA) ---
+  const dealCards = async () => {
     if (puntoBet === 0 && bancaBet === 0 && tieBet === 0) {
-      setMessages([...messages, {
-        id: messages.length + 1,
+      setMessages(prev => [...prev, {
+        id: Date.now(),
         user: 'Sistema',
         text: '¡Debes hacer una apuesta primero!',
         timestamp: new Date()
@@ -84,44 +93,53 @@ export default function App() {
     }
 
     setGameState('dealing');
-    const deck = shuffleDeck(createDeck());
+    
+    // Si el mazo está bajo, barajamos uno nuevo
+    let currentShoe = shoe.length < 10 ? initShoe() : [...shoe];
 
-    const puntoHand = [deck[0], deck[2]];
-    const bancaHand = [deck[1], deck[3]];
+    const p1 = currentShoe.pop();
+    const b1 = currentShoe.pop();
+    const p2 = currentShoe.pop();
+    const b2 = currentShoe.pop();
 
-    setPuntoCards(puntoHand);
-    setBancaCards(bancaHand);
+    // Secuencia de reparto pausada
+    setPuntoCards([p1]);
+    await sleep(800);
+    setBancaCards([b1]);
+    await sleep(800);
+    setPuntoCards([p1, p2]);
+    await sleep(800);
+    setBancaCards([b1, b2]);
+    await sleep(1000); // Pausa dramática antes del resultado
 
-    setTimeout(() => {
-      const puntoScore = calculateScore(puntoHand);
-      const bancaScore = calculateScore(bancaHand);
+    const puntoScore = calculateScore([p1, p2]);
+    const bancaScore = calculateScore([b1, b2]);
 
-      let gameWinner;
-      let winnings = 0;
+    let gameWinner;
+    let winnings = 0;
 
-      if (puntoScore > bancaScore) {
-        gameWinner = 'PUNTO';
-        winnings = puntoBet * 2;
-      } else if (bancaScore > puntoScore) {
-        gameWinner = 'BANCA';
-        winnings = bancaBet * 1.95;
-      } else {
-        gameWinner = 'TIE';
-        winnings = (tieBet * 8) + puntoBet + bancaBet;
-      }
+    if (puntoScore > bancaScore) {
+      gameWinner = 'PUNTO';
+      winnings = puntoBet * 2;
+    } else if (bancaScore > puntoScore) {
+      gameWinner = 'BANCA';
+      winnings = bancaBet * 1.95;
+    } else {
+      gameWinner = 'TIE';
+      winnings = (tieBet * 9); 
+    }
 
-      setWinner(gameWinner);
-      setBalance(prevBalance => prevBalance + winnings);
-      setGameState('result');
-
-      setHistory([...history, { winner: gameWinner, round: roundNumber }]);
-      setMessages(prevMessages => [...prevMessages, {
-        id: prevMessages.length + 1,
-        user: 'Sistema',
-        text: `¡${gameWinner} gana! Punto: ${puntoScore} - Banca: ${bancaScore}`,
-        timestamp: new Date()
-      }]);
-    }, 1500);
+    setWinner(gameWinner);
+    setBalance(prev => prev + winnings);
+    setShoe(currentShoe);
+    setGameState('result');
+    setHistory(prev => [{ winner: gameWinner, round: roundNumber }, ...prev]);
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      user: 'Sistema',
+      text: `¡${gameWinner} gana! Punto: ${puntoScore} - Banca: ${bancaScore}`,
+      timestamp: new Date()
+    }]);
   };
 
   const resetGame = () => {
@@ -136,8 +154,8 @@ export default function App() {
   };
 
   const handleSendMessage = (text) => {
-    setMessages([...messages, {
-      id: messages.length + 1,
+    setMessages(prev => [...prev, {
+      id: Date.now(),
       user: 'Jugador',
       text,
       timestamp: new Date()
@@ -145,101 +163,104 @@ export default function App() {
   };
 
   return (
-    // CONTENEDOR RAIZ: 100dvh exactos, sin overflow
     <div className="h-[100dvh] w-full bg-gradient-to-br from-green-800 via-green-900 to-gray-900 p-2 md:p-4 overflow-hidden flex flex-col">
-
       <div className="max-w-7xl mx-auto w-full h-full flex flex-col gap-4">
-
-        {/* HEADER: Altura fija automática */}
+        
+        {/* HEADER */}
         <header className="bg-gray-800/50 backdrop-blur rounded-lg p-4 flex justify-between items-center shrink-0 border border-white/10">
           <div className="flex items-center gap-4">
             <Trophy className="text-yellow-400" size={32} />
             <div>
-              <h1 className="text-white text-2xl md:text-3xl font-bold leading-none">Baccarat</h1>
-              <p className="text-gray-400 text-xs">Ronda #{roundNumber}</p>
+              <h1 className="text-white text-2xl md:text-3xl font-bold leading-none uppercase tracking-tighter">Semendick Royal</h1>
+              <p className="text-green-400 text-[10px] font-mono">SHOE: {shoe.length} CARDS | R#{roundNumber}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-gray-400 text-xs uppercase tracking-wider">Balance</p>
-            <p className="text-yellow-400 text-xl md:text-2xl font-bold">${balance.toFixed(2)}</p>
+            <p className="text-yellow-400 text-xl md:text-2xl font-mono font-bold">${balance.toFixed(2)}</p>
           </div>
         </header>
 
-        {/* CUERPO PRINCIPAL: flex-1 para ocupar el resto del 100dvh */}
+        {/* CUERPO PRINCIPAL */}
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-
-          {/* SECCIÓN JUEGO (Izquierda) */}
+          
           <div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
-
-            {/* TAPETE: Se ajusta al espacio disponible */}
-            <div className="flex-1 bg-green-700/50 border-2 border-green-600/30 rounded-xl p-4 flex flex-col justify-around items-center relative overflow-hidden">
-
+            
+            {/* TAPETE */}
+            <div className="flex-1 bg-green-700/40 border-2 border-green-600/30 rounded-[2.5rem] p-4 flex flex-col justify-around items-center relative overflow-hidden shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]">
+              
               {/* Banca */}
               <div className="w-full text-center">
-                <div className="flex items-center justify-center gap-4 mb-2">
-                  <h2 className="text-white/50 text-lg font-bold tracking-widest">BANCA</h2>
+                <div className="flex items-center justify-center gap-4 mb-4">
+                  <h2 className="text-red-500/70 text-lg font-black tracking-[0.3em]">BANKER</h2>
                   {bancaCards.length > 0 && (
-                    <span className="bg-yellow-400 text-black px-2 py-0.5 rounded text-sm font-bold">
+                    <motion.span initial={{scale:0}} animate={{scale:1}} className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
                       {calculateScore(bancaCards)}
-                    </span>
+                    </motion.span>
                   )}
                 </div>
-                <div className="flex gap-2 justify-center h-24 md:h-32">
-                  {bancaCards.map((card, index) => <Card key={index} {...card} />)}
-                </div>
-              </div>
-
-              {/* Punto */}
-              <div className="w-full text-center">
-                <div className="flex gap-2 justify-center h-24 md:h-32 mb-2">
-                  {puntoCards.map((card, index) => <Card key={index} {...card} />)}
-                </div>
-                <div className="flex items-center justify-center gap-4">
-                  <h2 className="text-white/50 text-lg font-bold tracking-widest">PUNTO</h2>
-                  {puntoCards.length > 0 && (
-                    <span className="bg-yellow-400 text-black px-2 py-0.5 rounded text-sm font-bold">
-                      {calculateScore(puntoCards)}
-                    </span>
-                  )}
+                <div className="flex gap-4 justify-center min-h-[120px]">
+                  <AnimatePresence>
+                    {bancaCards.map((card, index) => <Card key={`b-${index}`} {...card} />)}
+                  </AnimatePresence>
                 </div>
               </div>
 
               {/* Ganador Overlay */}
-              {winner && (
-                <motion.div
-                  initial={{ scale: 0 }} animate={{ scale: 1 }}
-                  className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10"
-                >
-                  <div className={`px-8 py-4 rounded-xl text-3xl font-black text-white shadow-2xl shadow-black/50 ${winner === 'PUNTO' ? 'bg-blue-600' : winner === 'BANCA' ? 'bg-red-600' : 'bg-green-600'
-                    }`}>
-                    ¡{winner} GANA!
-                  </div>
-                </motion.div>
-              )}
+              <div className="h-0 flex items-center justify-center z-20">
+                <AnimatePresence>
+                  {winner && (
+                    <motion.div 
+                      initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} exit={{scale:0}}
+                      className={`px-10 py-4 rounded-2xl text-4xl font-black text-white shadow-2xl rotate-[-5deg] animate-bounce ${
+                        winner === 'PUNTO' ? 'bg-blue-600' : winner === 'BANCA' ? 'bg-red-600' : 'bg-green-600'
+                      } border-4 border-white`}
+                    >
+                      ¡{winner} GANA!
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Punto */}
+              <div className="w-full text-center">
+                <div className="flex gap-4 justify-center min-h-[120px] mb-4">
+                  <AnimatePresence>
+                    {puntoCards.map((card, index) => <Card key={`p-${index}`} {...card} />)}
+                  </AnimatePresence>
+                </div>
+                <div className="flex items-center justify-center gap-4">
+                  <h2 className="text-blue-400/70 text-lg font-black tracking-[0.3em]">PLAYER</h2>
+                  {puntoCards.length > 0 && (
+                    <motion.span initial={{scale:0}} animate={{scale:1}} className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                      {calculateScore(puntoCards)}
+                    </motion.span>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* PANEL DE APUESTAS: Altura fija compacta */}
-            <div className="bg-gray-800/80 rounded-xl p-4 shrink-0">
-              <div className="flex flex-col justify-between items-center gap-4">
-                <div className="">
-                  <p className="text-white/60 text-xs mb-2 ml-1">Ficha seleccionada</p>
+            {/* PANEL DE APUESTAS */}
+            <div className="bg-gray-900/90 rounded-2xl p-6 shrink-0 border border-white/5">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div>
                   <BettingChips selectedChip={selectedChip} onSelectChip={setSelectedChip} />
                 </div>
-
-                <div className="grid grid-cols-3 gap-2">
+                
+                <div className="flex gap-4">
                   <BetButton label="PUNTO" color="bg-blue-600" amount={puntoBet} onClick={() => placeBet('punto')} active={gameState === 'betting'} />
-                  <BetButton label="EMPATE" color="bg-green-600" amount={tieBet} onClick={() => placeBet('tie')} active={gameState === 'betting'} />
+                  <BetButton label="TIE" color="bg-green-600" amount={tieBet} onClick={() => placeBet('tie')} active={gameState === 'betting'} />
                   <BetButton label="BANCA" color="bg-red-600" amount={bancaBet} onClick={() => placeBet('banca')} active={gameState === 'betting'} />
                 </div>
 
-                <div className="">
+                <div className="w-full md:w-auto">
                   {gameState === 'betting' ? (
-                    <button onClick={dealCards} className="w-full h-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg py-3 transition-all active:scale-95">
-                      REPARTIR
+                    <button onClick={dealCards} className="w-full px-12 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-xl transition-all active:scale-95 shadow-lg uppercase tracking-tighter">
+                      Repartir
                     </button>
                   ) : (
-                    <button onClick={resetGame} className="w-full h-full bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg py-3 transition-all flex items-center justify-center gap-2">
-                      <RotateCcw size={18} />
+                    <button onClick={resetGame} disabled={gameState === 'dealing'} className="w-full px-12 py-4 bg-white/10 hover:bg-white/20 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 uppercase tracking-tighter">
+                      <RotateCcw size={20} /> Limpiar
                     </button>
                   )}
                 </div>
@@ -247,12 +268,12 @@ export default function App() {
             </div>
           </div>
 
-          {/* SIDEBAR (Derecha) */}
+          {/* SIDEBAR */}
           <div className="flex flex-col gap-4 min-h-0 h-full">
-            <div className="flex-1 min-h-0 bg-gray-800/30 rounded-xl overflow-hidden border border-white/5">
+            <div className="flex-1 min-h-0 bg-gray-800/30 rounded-xl overflow-hidden border border-white/5 shadow-xl">
               <GameHistory history={history} />
             </div>
-            <div className="flex-1 min-h-0 bg-gray-800/30 rounded-xl overflow-hidden border border-white/5">
+            <div className="flex-1 min-h-0 bg-gray-800/30 rounded-xl overflow-hidden border border-white/5 shadow-xl">
               <Chat messages={messages} onSendMessage={handleSendMessage} />
             </div>
           </div>
@@ -268,13 +289,14 @@ function BetButton({ label, color, amount, onClick, active }) {
     <button
       onClick={onClick}
       disabled={!active}
-      className={`${color} disabled:opacity-50 disabled:grayscale transition-all rounded-lg p-2 text-white relative flex flex-col items-center justify-center min-h-[60px]`}
+      className={`${color} disabled:opacity-50 disabled:grayscale transition-all rounded-xl w-24 h-20 text-white relative flex flex-col items-center justify-center border-b-4 border-black/30 shadow-lg active:border-b-0 active:translate-y-1`}
     >
-      <span className="text-xs font-bold opacity-80">{label}</span>
+      <span className="text-[10px] font-black opacity-70 tracking-widest">{label}</span>
+      <span className="text-sm font-mono font-bold">${amount}</span>
       {amount > 0 && (
-        <span className="absolute -top-2 -right-1 bg-yellow-400 text-black text-[10px] font-black px-1.5 rounded-full shadow-lg">
-          ${amount}
-        </span>
+        <motion.div initial={{scale:0}} animate={{scale:1}} className="absolute -top-3 -right-3 bg-yellow-400 text-black text-[10px] font-black w-8 h-8 flex items-center justify-center rounded-full border-2 border-gray-900 shadow-xl">
+          {amount}
+        </motion.div>
       )}
     </button>
   );

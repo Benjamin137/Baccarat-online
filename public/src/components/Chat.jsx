@@ -1,24 +1,30 @@
 import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
+import {useSocket} from '../client/useSocket';
 
-export function Chat({ messages = [], onSendMessage }) {
+export function Chat({ onSendMessage }) {
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);
+
+  const { chatMessages, sendMessageChat } = useSocket();
 
   // Auto-scroll al último mensaje cada vez que llegan nuevos
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [chatMessages]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim()) {
       onSendMessage(input);
       setInput('');
+      sendMessageChat(input);
     }
   };
+
+  
 
   return (
     /* h-full para llenar el contenedor padre y min-h-0 para evitar el desborde en flex */
@@ -35,23 +41,23 @@ export function Chat({ messages = [], onSendMessage }) {
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-gray-700 scroll-smooth min-h-0"
       >
-        {messages.map((msg) => (
+        {chatMessages.map((msg) => (
           <div key={msg.id} className="group">
             <div className="flex items-baseline gap-2 mb-1">
               <span className={`text-xs font-bold ${msg.user === 'Sistema' ? 'text-yellow-500' : 'text-blue-400'}`}>
                 {msg.user}
               </span>
               <span className="text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {msg.hour}
               </span>
             </div>
             <div className="bg-gray-800/80 rounded-tr-lg rounded-br-lg rounded-bl-lg p-2 border-l-2 border-white/10">
-              <p className="text-gray-200 text-sm leading-relaxed">{msg.text}</p>
+              <p className="text-gray-200 text-sm leading-relaxed">{msg.message}</p>
             </div>
           </div>
         ))}
         
-        {messages.length === 0 && (
+        {chatMessages.length === 0 && (
           <div className="h-full flex items-center justify-center">
             <p className="text-gray-500 text-xs italic">No hay mensajes en la mesa...</p>
           </div>
