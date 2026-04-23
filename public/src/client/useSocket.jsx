@@ -25,9 +25,16 @@ export const useSocket = () => {
         }
     };
 
+    const sendMessageChat = (message) => {
+        if (message.trim() !== '') {
+            socket.emit('chatMessage', message);
+        }
+    };
+
     return {
         conectar,
         socket,
-        chatMessages
+        chatMessages,
+        sendMessageChat
     };
 };
