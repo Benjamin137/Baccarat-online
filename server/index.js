@@ -57,10 +57,6 @@ setInterval(() => {
     //     }, 2000); // 2 segundos de "suspenso" repartiendo cartas
     // }
     // }
-
-    io.emit('mi_evento', { "test": "test" });
-    console.log('Enviando evento de prueba a los clientes');
-
 }, 1000);
 
 // Función auxiliar para calcular estadísticas de apuestas
@@ -96,9 +92,10 @@ io.on('connection', (socket) => {
 
     // NUEVO: Manejo del chat de texto
     socket.on('chatMessage', (msg) => {
-        const player = players[socket.id];
-        if (player && msg.trim() !== '') {
-            io.emit('chatMessage', { user: player.username, message: msg });
+        if (msg.trim() !== '') {
+            console.log(`Mensaje de ${socket.id}: ${msg}`);
+            let hour = new Date().toLocaleTimeString();
+            io.emit('chatMessage', { user: socket.id, message: msg, hour });
         }
     });
 
