@@ -10,6 +10,8 @@ services:
       - /usr/src/app/node_modules
     environment:
       - PORT=3000
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev
     networks:
       - baccarat-network
 
@@ -24,6 +26,8 @@ services:
       - /usr/src/app/node_modules
     environment:
       - VITE_PORT=2000
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev
     networks:
       - baccarat-network
     depends_on:

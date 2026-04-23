@@ -6,7 +6,12 @@ const BaccaratGame = require('./gameLogic');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "*", // o especifica tu dominio
+        methods: ["GET", "POST"]
+    }
+});
 let history = []; // Guardará los resultados: ['Banca', 'Jugador', 'Empate', ...]
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, '../public')));
@@ -19,39 +24,43 @@ let countdown = 15;
 
 // Ciclo principal del juego
 setInterval(() => {
-    if (gameState === 'WAITING') {
-        countdown--;
-        io.emit('timer', countdown);
+    // if (gameState === 'WAITING') {
+    // countdown--;
+    // io.emit('timer', countdown);
 
-        if (countdown <= 0) {
-            gameState = 'PLAYING';
-            io.emit('gameState', { state: gameState, message: '¡No más apuestas!' });
+    // if (countdown <= 0) {
+    //     gameState = 'PLAYING';
+    //     io.emit('gameState', { state: gameState, message: '¡No más apuestas!' });
 
-            // Jugar la ronda y obtener resultados
-            const result = game.playRound();
+    //     // Jugar la ronda y obtener resultados
+    //     const result = game.playRound();
 
-            setTimeout(() => {
-                gameState = 'RESULTS';
-                history.push(result.winner); // GUARDAR EN EL HISTORIAL
-                if (history.length > 20) history.shift(); // Mantener solo los últimos 20
+    //     setTimeout(() => {
+    //         gameState = 'RESULTS';
+    //         history.push(result.winner); // GUARDAR EN EL HISTORIAL
+    //         if (history.length > 20) history.shift(); // Mantener solo los últimos 20
 
-                io.emit('gameState', {
-                    state: gameState,
-                    result,
-                    bets,
-                    history // ENVIAR EL HISTORIAL ACTUALIZADO
-                });
+    //         io.emit('gameState', {
+    //             state: gameState,
+    //             result,
+    //             bets,
+    //             history // ENVIAR EL HISTORIAL ACTUALIZADO
+    //         });
 
-                // Reiniciar para la siguiente ronda
-                setTimeout(() => {
-                    bets = {};
-                    countdown = 15;
-                    gameState = 'WAITING';
-                    io.emit('gameState', { state: gameState, message: 'Hagan sus apuestas' });
-                }, 8000); // 8 segundos para ver resultados
-            }, 2000); // 2 segundos de "suspenso" repartiendo cartas
-        }
-    }
+    //         // Reiniciar para la siguiente ronda
+    //         setTimeout(() => {
+    //             bets = {};
+    //             countdown = 15;
+    //             gameState = 'WAITING';
+    //             io.emit('gameState', { state: gameState, message: 'Hagan sus apuestas' });
+    //         }, 8000); // 8 segundos para ver resultados
+    //     }, 2000); // 2 segundos de "suspenso" repartiendo cartas
+    // }
+    // }
+
+    io.emit('mi_evento', { "test": "test" });
+    console.log('Enviando evento de prueba a los clientes');
+
 }, 1000);
 
 // Función auxiliar para calcular estadísticas de apuestas
@@ -145,7 +154,7 @@ io.on('connection', (socket) => {
 // ... (resto del código igual)
 
 // Escuchar en 0.0.0.0 permite conexiones desde la red local
-const PORT = 2000;
+const PORT = 3000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
     console.log(`Para acceder desde otro dispositivo usa la IP de tu PC, ej: http://192.168.x.x:${PORT}`);

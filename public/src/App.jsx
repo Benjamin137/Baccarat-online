@@ -5,8 +5,17 @@ import { GameHistory } from "./components/GameHistory.jsx";
 import { Chat } from "./components/Chat.jsx";
 import { motion } from "motion/react";
 import { Trophy, RotateCcw } from "lucide-react";
+import { conectarSocket, unirse } from './client/controller.jsx';
+
 
 export default function App() {
+
+  conectarSocket();
+
+  setTimeout(() => {
+    unirse('Benjamin');
+  }, 1000);
+
   const [balance, setBalance] = useState(1000);
   const [selectedChip, setSelectedChip] = useState(5);
   const [puntoBet, setPuntoBet] = useState(0);
@@ -138,9 +147,9 @@ export default function App() {
   return (
     // CONTENEDOR RAIZ: 100dvh exactos, sin overflow
     <div className="h-[100dvh] w-full bg-gradient-to-br from-green-800 via-green-900 to-gray-900 p-2 md:p-4 overflow-hidden flex flex-col">
-      
+
       <div className="max-w-7xl mx-auto w-full h-full flex flex-col gap-4">
-        
+
         {/* HEADER: Altura fija automática */}
         <header className="bg-gray-800/50 backdrop-blur rounded-lg p-4 flex justify-between items-center shrink-0 border border-white/10">
           <div className="flex items-center gap-4">
@@ -158,13 +167,13 @@ export default function App() {
 
         {/* CUERPO PRINCIPAL: flex-1 para ocupar el resto del 100dvh */}
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-          
+
           {/* SECCIÓN JUEGO (Izquierda) */}
           <div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
-            
+
             {/* TAPETE: Se ajusta al espacio disponible */}
             <div className="flex-1 bg-green-700/50 border-2 border-green-600/30 rounded-xl p-4 flex flex-col justify-around items-center relative overflow-hidden">
-              
+
               {/* Banca */}
               <div className="w-full text-center">
                 <div className="flex items-center justify-center gap-4 mb-2">
@@ -197,13 +206,12 @@ export default function App() {
 
               {/* Ganador Overlay */}
               {winner && (
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0 }} animate={{ scale: 1 }}
                   className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10"
                 >
-                  <div className={`px-8 py-4 rounded-xl text-3xl font-black text-white shadow-2xl shadow-black/50 ${
-                    winner === 'PUNTO' ? 'bg-blue-600' : winner === 'BANCA' ? 'bg-red-600' : 'bg-green-600'
-                  }`}>
+                  <div className={`px-8 py-4 rounded-xl text-3xl font-black text-white shadow-2xl shadow-black/50 ${winner === 'PUNTO' ? 'bg-blue-600' : winner === 'BANCA' ? 'bg-red-600' : 'bg-green-600'
+                    }`}>
                     ¡{winner} GANA!
                   </div>
                 </motion.div>
@@ -217,7 +225,7 @@ export default function App() {
                   <p className="text-white/60 text-xs mb-2 ml-1">Ficha seleccionada</p>
                   <BettingChips selectedChip={selectedChip} onSelectChip={setSelectedChip} />
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-2">
                   <BetButton label="PUNTO" color="bg-blue-600" amount={puntoBet} onClick={() => placeBet('punto')} active={gameState === 'betting'} />
                   <BetButton label="EMPATE" color="bg-green-600" amount={tieBet} onClick={() => placeBet('tie')} active={gameState === 'betting'} />
@@ -248,7 +256,7 @@ export default function App() {
               <Chat messages={messages} onSendMessage={handleSendMessage} />
             </div>
           </div>
-          
+
         </main>
       </div>
     </div>
