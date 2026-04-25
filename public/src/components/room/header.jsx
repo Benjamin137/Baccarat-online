@@ -3,14 +3,13 @@ import { Trophy} from "lucide-react";
 
 
 
-const HeaderRoom = ({shoe, roundNumber, balance}) => {
+const HeaderRoom = ({roundNumber, balance}) => {
     return (
         <header className="bg-gray-800/50 backdrop-blur rounded-lg p-4 flex justify-between items-center shrink-0 border border-white/10">
             <div className="flex items-center gap-4">
                 <Trophy className="text-yellow-400" size={32} />
                 <div>
-                    <h1 className="text-white text-2xl md:text-3xl font-bold leading-none uppercase tracking-tighter">Semendick Royal</h1>
-                    <p className="text-green-400 text-[10px] font-mono">SHOE: {shoe.length} CARDS | R#{roundNumber}</p>
+                    <h1 className="text-white text-2xl md:text-3xl font-bold leading-none uppercase tracking-tighter">Casino Royal</h1>
                 </div>
             </div>
             <div className="text-right">

@@ -1,162 +1,106 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
-const BaccaratGame = require('./gameLogic');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
+const { playBaccarat } = require("./gameLogic");
 
 const app = express();
+app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*", // o especifica tu dominio
-        methods: ["GET", "POST"]
-    }
+  cors: { origin: "*" },
 });
-let history = []; // Guardará los resultados: ['Banca', 'Jugador', 'Empate', ...]
-// Servir archivos estáticos
-app.use(express.static(path.join(__dirname, '../public')));
 
-const game = new BaccaratGame();
-let players = {};
-let bets = {}; // Formato: { socketId: { type: 'Jugador', amount: 100 } }
-let gameState = 'WAITING'; // WAITING, PLAYING, RESULTS
-let countdown = 15;
-let usersOnline = 0;
 
-// Ciclo principal del juego
-setInterval(() => {
-    // if (gameState === 'WAITING') {
-    // countdown--;
-    // io.emit('timer', countdown);
+let usersOnline = [];
 
-    // if (countdown <= 0) {
-    //     gameState = 'PLAYING';
-    //     io.emit('gameState', { state: gameState, message: '¡No más apuestas!' });
+let gameState = {
+  status: "betting", // betting, dealing, result
+  timer: 15,
+  cards: { punto: [], banca: [] },
+  winner: null,
+  history: []
+};
 
-    //     // Jugar la ronda y obtener resultados
-    //     const result = game.playRound();
+function startGameLoop() {
+  // 1. Fase de Apuestas
+  gameState.status = "betting";
+  gameState.timer = 15;
+  gameState.cards = { punto: [], banca: [] };
+  gameState.winner = null;
+  io.emit("gameState", gameState);
 
-    //     setTimeout(() => {
-    //         gameState = 'RESULTS';
-    //         history.push(result.winner); // GUARDAR EN EL HISTORIAL
-    //         if (history.length > 20) history.shift(); // Mantener solo los últimos 20
+  const interval = setInterval(() => {
+    gameState.timer--;
+    io.emit("timerUpdate", gameState.timer);
 
-    //         io.emit('gameState', {
-    //             state: gameState,
-    //             result,
-    //             bets,
-    //             history // ENVIAR EL HISTORIAL ACTUALIZADO
-    //         });
-
-    //         // Reiniciar para la siguiente ronda
-    //         setTimeout(() => {
-    //             bets = {};
-    //             countdown = 15;
-    //             gameState = 'WAITING';
-    //             io.emit('gameState', { state: gameState, message: 'Hagan sus apuestas' });
-    //         }, 8000); // 8 segundos para ver resultados
-    //     }, 2000); // 2 segundos de "suspenso" repartiendo cartas
-    // }
-    // }
-}, 1000);
-
-// Función auxiliar para calcular estadísticas de apuestas
-function getBettingStats() {
-    const totalPlayers = Object.keys(players).length;
-    if (totalPlayers === 0) return { playerPct: 0, bankerPct: 0 };
-
-    let playerBets = 0;
-    let bankerBets = 0;
-
-    Object.values(bets).forEach(bet => {
-        if (bet.type === 'Jugador') playerBets++;
-        if (bet.type === 'Banca') bankerBets++;
-    });
-
-    return {
-        playerPct: Math.round((playerBets / totalPlayers) * 100),
-        bankerPct: Math.round((bankerBets / totalPlayers) * 100)
-    };
+    if (gameState.timer <= 0) {
+      clearInterval(interval);
+      resolveGame();
+    }
+  }, 1000);
 }
 
-// Manejo de conexiones de clientes
-io.on('connection', (socket) => {
-    console.log('Nuevo jugador conectado:', socket.id);
-    usersOnline++;
-    io.emit('usersOnline', usersOnline);
-    // Registro del jugador
-    socket.on('join', (username) => {
-        players[socket.id] = { username, balance: 1000 };
-        socket.emit('joined', players[socket.id]);
-        io.emit('playerList', Object.values(players));
-        io.emit('statsUpdate', getBettingStats());
-    });
+async function resolveGame() {
+  gameState.status = "dealing";
+  io.emit("statusUpdate", "dealing");
 
-    // NUEVO: Manejo del chat de texto
-    socket.on('chatMessage', (msg) => {
-        if (msg.trim() !== '') {
-            console.log(`Mensaje de ${socket.id}: ${msg}`);
-            let hour = new Date().toLocaleTimeString();
-            io.emit('chatMessage', { user: socket.id, message: msg, hour });
-        }
-    });
+  const result = playBaccarat(); 
+  
+  const finalPunto = result.cards.player; // Puede tener 2 o 3 cartas
+  const finalBanca = result.cards.banker; // Puede tener 2 o 3 cartas
 
-    // ACTUALIZADO: Manejo de apuestas con validación
-    // Actualizar el manejo de 'placeBet' para emitir estadísticas nuevas
-    // ACTUALIZADO: Manejo de apuestas con validación
-    socket.on('placeBet', (betData) => {
-        // 1. Obtener la información del jugador que está haciendo la apuesta
-        const player = players[socket.id];
+  // Limpiamos cartas actuales para el inicio de la animación
+  gameState.cards.punto = [];
+  gameState.cards.banca = [];
 
-        // 2. Si por alguna razón el jugador no existe, salimos
-        if (!player) return;
+  // Determinamos el máximo de cartas repartidas para el loop
+  const maxCards = Math.max(finalPunto.length, finalBanca.length);
 
-        // 3. Validar que estemos en tiempo de apuestas
-        if (gameState !== 'WAITING') {
-            socket.emit('errorMsg', 'No se pueden hacer apuestas en este momento.');
-            return;
-        }
+  for (let i = 0; i < maxCards; i++) {
+    // Repartir al Punto si tiene carta en esta posición
+    if (finalPunto[i]) {
+      gameState.cards.punto.push(finalPunto[i]);
+      io.emit("cardsUpdate", gameState.cards);
+      await new Promise(r => setTimeout(r, 800));
+    }
+    
+    // Repartir a la Banca si tiene carta en esta posición
+    if (finalBanca[i]) {
+      gameState.cards.banca.push(finalBanca[i]);
+      io.emit("cardsUpdate", gameState.cards);
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
 
-        // 4. Validar que la apuesta sea un número válido
-        if (typeof betData.amount !== 'number' || betData.amount <= 0) {
-            socket.emit('errorMsg', 'Cantidad de apuesta inválida.');
-            return;
-        }
+  // Fin del reparto, mostramos resultado
+  gameState.status = "result";
+  gameState.winner = result.winner;
+  gameState.history.unshift({ winner: result.winner, id: Date.now() });
+  
+  io.emit("gameResult", { 
+    winner: gameState.winner, 
+    history: gameState.history 
+  });
 
-        // 5. Validar que el jugador tenga saldo suficiente
-        if (player.balance >= betData.amount) {
-            player.balance -= betData.amount; // Descontar el dinero
+  setTimeout(startGameLoop, 5000);
+}
 
-            // Guardar la apuesta
-            bets[socket.id] = { username: player.username, type: betData.type, amount: betData.amount };
+io.on("connection", (socket) => {
+  socket.emit("gameState", gameState);
+  usersOnline.push(socket.id);
+  io.emit("usersOnline", usersOnline.length);  
+  
+  socket.on("chatMessage", (msg) => {
+    io.emit("chatMessage", { user: socket.id.substr(0, 5), message: msg });
+  });
 
-            // Actualizar a los clientes
-            socket.emit('updateBalance', player.balance);
-            io.emit('newBet', bets[socket.id]);
+  socket.on("disconnect", () => {
+    usersOnline = usersOnline.filter((id) => id !== socket.id);
+    io.emit("usersOnline", usersOnline.length);
 
-            // Actualizar estadísticas de porcentajes
-            io.emit('statsUpdate', getBettingStats());
-        } else {
-            socket.emit('errorMsg', 'Saldo insuficiente.');
-        }
-    });
-    // Desconexión
-    socket.on('disconnect', () => {
-        delete players[socket.id];
-        delete bets[socket.id];
-        io.emit('playerList', Object.values(players));
-        console.log('Jugador desconectado:', socket.id);
-        io.emit('statsUpdate', getBettingStats());
-        usersOnline--;
-        io.emit('usersOnline', usersOnline);
-    });
+  });
 });
 
-// ... (resto del código igual)
-
-// Escuchar en 0.0.0.0 permite conexiones desde la red local
-const PORT = 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`Para acceder desde otro dispositivo usa la IP de tu PC, ej: http://192.168.x.x:${PORT}`);
-});
+startGameLoop();
+server.listen(3000, () => console.log("Dealer Baccarat en puerto 3001"));

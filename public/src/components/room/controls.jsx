@@ -1,40 +1,71 @@
 import BetButton from "./betButton";
 import { BettingChips } from "./BettingChips";
-import { RotateCcw } from "lucide-react";
 
-
-
-
-
-const Controls = ({ selectedChip, setSelectedChip, puntoBet, tieBet, bancaBet, placeBet, gameState, dealCards, resetGame }) => {
+const Controls = ({
+    selectedChip,
+    setSelectedChip,
+    puntoBet,
+    tieBet,
+    bancaBet,
+    placeBet,
+    gameState
+}) => {
     return (
-        <div className="bg-gray-900/90 rounded-2xl p-6 shrink-0 border border-white/5">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                <div>
-                    <BettingChips selectedChip={selectedChip} onSelectChip={setSelectedChip} />
-                </div>
+        <div className="w-full max-w-4xl mx-auto">
+            {/* Contenedor Principal con efecto Glassmorphism */}
+            <div className="bg-gray-900/80 backdrop-blur-md rounded-[2rem] p-8 border border-white/10 shadow-2xl relative overflow-hidden">
 
-                <div className="flex gap-4">
-                    <BetButton label="PUNTO" color="bg-blue-600" amount={puntoBet} onClick={() => placeBet('punto')} active={gameState === 'betting'} />
-                    <BetButton label="TIE" color="bg-green-600" amount={tieBet} onClick={() => placeBet('tie')} active={gameState === 'betting'} />
-                    <BetButton label="BANCA" color="bg-red-600" amount={bancaBet} onClick={() => placeBet('banca')} active={gameState === 'betting'} />
-                </div>
+                {/* Decoración sutil de fondo */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
 
-                <div className="w-full md:w-auto">
-                    {gameState === 'betting' ? (
-                        <button onClick={dealCards} className="w-full px-12 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-xl transition-all active:scale-95 shadow-lg uppercase tracking-tighter">
-                            Repartir
-                        </button>
-                    ) : (
-                        <button onClick={resetGame} disabled={gameState === 'dealing'} className="w-full px-12 py-4 bg-white/10 hover:bg-white/20 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 uppercase tracking-tighter">
-                            <RotateCcw size={20} /> Limpiar
-                        </button>
-                    )}
+                <div className="flex flex-col items-center gap-8">
+
+                    {/* SECCIÓN DE FICHAS */}
+                    <div className="relative py-2 px-6 bg-black/20 rounded-full border border-white/5 shadow-inner">
+                        <BettingChips selectedChip={selectedChip} onSelectChip={setSelectedChip} />
+                    </div>
+
+                    {/* SECCIÓN DE BOTONES DE APUESTA */}
+                    {/* SECCIÓN DE BOTONES DE APUESTA */}
+                    <div className="flex flex-row justify-between gap-4 w-full max-w-6xl">
+
+                        {/* Punto */}
+                        <div className="flex-[2] flex">
+                            <BetButton
+                                label="Punto"
+                                color="bg-blue-600"
+                                amount={puntoBet}
+                                onClick={() => placeBet('punto')}
+                                active={gameState === 'betting'}
+                            />
+                        </div>
+
+                        {/* TIE */}
+                        <div className="flex-1 flex">
+                            <BetButton
+                                label="Tie"
+                                color="bg-green-600"
+                                amount={tieBet}
+                                onClick={() => placeBet('tie')}
+                                active={gameState === 'betting'}
+                            />
+                        </div>
+
+                        {/* Banca */}
+                        <div className="flex-[2] flex">
+                            <BetButton
+                                label="Banca"
+                                color="bg-red-600"
+                                amount={bancaBet}
+                                onClick={() => placeBet('banca')}
+                                active={gameState === 'betting'}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    )
-}
-
+    );
+};
 
 export default Controls;

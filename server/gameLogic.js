@@ -1,75 +1,62 @@
-// Valores de las cartas en Baccarat
-const SUITS = ['♠', '♥', '♦', '♣'];
-const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const createDeck = () => {
+  const suits = ["hearts", "diamonds", "clubs", "spades"];
+  const values = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+  let deck = [];
+  for (let suit of suits) {
+    for (let value of values) {
+      deck.push({ value, suit });
+    }
+  }
+  return deck.sort(() => Math.random() - 0.5);
+};
 
-function getCardValue(val) {
-    if (['10', 'J', 'Q', 'K'].includes(val)) return 0;
-    if (val === 'A') return 1;
-    return parseInt(val);
-}
+const getCardValue = (card) => {
+  if (["10", "J", "Q", "K"].includes(card.value)) return 0;
+  if (card.value === "A") return 1;
+  return parseInt(card.value);
+};
 
-class BaccaratGame {
-    constructor() {
-        this.deck = [];
-        this.playerHand = [];
-        this.bankerHand = [];
-        this.createDeck();
+const calculateScore = (cards) => {
+  return cards.reduce((sum, card) => sum + getCardValue(card), 0) % 10;
+};
+
+const playBaccarat = () => {
+  const deck = createDeck();
+  let player = [deck.pop(), deck.pop()];
+  let banker = [deck.pop(), deck.pop()];
+
+  let pScore = calculateScore(player);
+  let bScore = calculateScore(banker);
+
+  // Regla de Naturales
+  if (pScore < 8 && bScore < 8) {
+    // Regla del Jugador
+    let pTerceraCard = null;
+    if (pScore <= 5) {
+      pTerceraCard = deck.pop();
+      player.push(pTerceraCard);
+      pScore = calculateScore(player);
     }
 
-    createDeck() {
-        this.deck = [];
-        for (let suit of SUITS) {
-            for (let value of VALUES) {
-                this.deck.push({ suit, value, numericValue: getCardValue(value) });
-            }
-        }
-        // Mezclar el mazo (Fisher-Yates)
-        for (let i = this.deck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
-        }
+    // Regla de la Banca (Depende de si el jugador pidió y qué pidió)
+    if (pTerceraCard === null) {
+      if (bScore <= 5) banker.push(deck.pop());
+    } else {
+      const v = pTerceraCard.numericValue;
+      if (bScore <= 2) banker.push(deck.pop());
+      else if (bScore === 3 && v !== 8) banker.push(deck.pop());
+      else if (bScore === 4 && [2,3,4,5,6,7].includes(v)) banker.push(deck.pop());
+      else if (bScore === 5 && [4,5,6,7].includes(v)) banker.push(deck.pop());
+      else if (bScore === 6 && [6,7].includes(v)) banker.push(deck.pop());
     }
+    bScore = calculateScore(banker);
+  }
 
-    calculateScore(hand) {
-        let sum = hand.reduce((acc, card) => acc + card.numericValue, 0);
-        return sum % 10; // En Baccarat solo importa el último dígito
-    }
+  let winner = "Tie";
+  if (pScore > bScore) winner = "Punto";
+  else if (bScore > pScore) winner = "Banca";
 
-    playRound() {
-        if (this.deck.length < 10) this.createDeck(); // Barajar si quedan pocas cartas
+  return { cards: { player, banker }, winner };
+};
 
-        // Repartir 2 cartas a cada uno
-        this.playerHand = [this.deck.pop(), this.deck.pop()];
-        this.bankerHand = [this.deck.pop(), this.deck.pop()];
-
-        let playerScore = this.calculateScore(this.playerHand);
-        let bankerScore = this.calculateScore(this.bankerHand);
-
-        // Regla simplificada de la tercera carta: si el jugador tiene <= 5, pide carta
-        if (playerScore <= 5) {
-            this.playerHand.push(this.deck.pop());
-            playerScore = this.calculateScore(this.playerHand);
-        }
-
-        // Regla simplificada para la banca: si tiene <= 5, pide carta
-        if (bankerScore <= 5) {
-            this.bankerHand.push(this.deck.pop());
-            bankerScore = this.calculateScore(this.bankerHand);
-        }
-
-        // Determinar ganador
-        let result = 'Empate';
-        if (playerScore > bankerScore) result = 'Jugador';
-        else if (bankerScore > playerScore) result = 'Banca';
-
-        return {
-            playerHand: this.playerHand,
-            bankerHand: this.bankerHand,
-            playerScore,
-            bankerScore,
-            winner: result
-        };
-    }
-}
-
-module.exports = BaccaratGame;
+module.exports = { playBaccarat };
