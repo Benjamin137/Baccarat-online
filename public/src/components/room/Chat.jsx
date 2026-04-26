@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import {useSocket} from '../../client/useSocket';
 
-export function Chat({ onSendMessage }) {
+
+export function Chat() {
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);
 
-  const { chatMessages, sendMessageChat } = useSocket();
+  const { chatMessages, socket } = useSocket();
 
   // Auto-scroll al último mensaje cada vez que llegan nuevos
   useEffect(() => {
@@ -18,16 +19,14 @@ export function Chat({ onSendMessage }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim()) {
-      onSendMessage(input);
+      socket.emit('chatMessage', input);
       setInput('');
-      sendMessageChat(input);
     }
   };
 
   
 
   return (
-    /* h-full para llenar el contenedor padre y min-h-0 para evitar el desborde en flex */
     <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg flex flex-col h-full min-h-0 border border-white/5">
       
       {/* Título Fijo */}

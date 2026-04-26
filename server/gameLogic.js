@@ -28,26 +28,30 @@ const playBaccarat = () => {
   let pScore = calculateScore(player);
   let bScore = calculateScore(banker);
 
-  // Regla de Naturales
   if (pScore < 8 && bScore < 8) {
-    // Regla del Jugador
-    let pTerceraCard = null;
+    let pTerceraCardValue = null;
     if (pScore <= 5) {
-      pTerceraCard = deck.pop();
-      player.push(pTerceraCard);
+      const drawnCard = deck.pop();
+      player.push(drawnCard);
+      pTerceraCardValue = getCardValue(drawnCard);
       pScore = calculateScore(player);
     }
 
-    // Regla de la Banca (Depende de si el jugador pidió y qué pidió)
-    if (pTerceraCard === null) {
+    if (pTerceraCardValue === null) {
       if (bScore <= 5) banker.push(deck.pop());
     } else {
-      const v = pTerceraCard.numericValue;
-      if (bScore <= 2) banker.push(deck.pop());
-      else if (bScore === 3 && v !== 8) banker.push(deck.pop());
-      else if (bScore === 4 && [2,3,4,5,6,7].includes(v)) banker.push(deck.pop());
-      else if (bScore === 5 && [4,5,6,7].includes(v)) banker.push(deck.pop());
-      else if (bScore === 6 && [6,7].includes(v)) banker.push(deck.pop());
+      const v = pTerceraCardValue;
+      if (bScore <= 2) {
+        banker.push(deck.pop());
+      } else if (bScore === 3 && v !== 8) {
+        banker.push(deck.pop());
+      } else if (bScore === 4 && [2, 3, 4, 5, 6, 7].includes(v)) {
+        banker.push(deck.pop());
+      } else if (bScore === 5 && [4, 5, 6, 7].includes(v)) {
+        banker.push(deck.pop());
+      } else if (bScore === 6 && [6, 7].includes(v)) {
+        banker.push(deck.pop());
+      }
     }
     bScore = calculateScore(banker);
   }
@@ -56,7 +60,11 @@ const playBaccarat = () => {
   if (pScore > bScore) winner = "Punto";
   else if (bScore > pScore) winner = "Banca";
 
-  return { cards: { player, banker }, winner };
+  return { 
+    cards: { player, banker }, 
+    scores: { player: pScore, banker: bScore },
+    winner 
+  };
 };
 
 module.exports = { playBaccarat };

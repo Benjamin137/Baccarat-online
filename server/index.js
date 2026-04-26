@@ -11,11 +11,11 @@ const io = new Server(server, {
   cors: { origin: "*" },
 });
 
-
 let usersOnline = [];
+let currentBets = [];
 
 let gameState = {
-  status: "betting", // betting, dealing, result
+  status: "betting",
   timer: 15,
   cards: { punto: [], banca: [] },
   winner: null,
@@ -23,12 +23,14 @@ let gameState = {
 };
 
 function startGameLoop() {
-  // 1. Fase de Apuestas
   gameState.status = "betting";
   gameState.timer = 15;
   gameState.cards = { punto: [], banca: [] };
   gameState.winner = null;
+  currentBets = []; 
+  
   io.emit("gameState", gameState);
+  console.log("Nueva ronda: Esperando apuestas...");
 
   const interval = setInterval(() => {
     gameState.timer--;
@@ -47,25 +49,21 @@ async function resolveGame() {
 
   const result = playBaccarat(); 
   
-  const finalPunto = result.cards.player; // Puede tener 2 o 3 cartas
-  const finalBanca = result.cards.banker; // Puede tener 2 o 3 cartas
+  const finalPunto = result.cards.player;
+  const finalBanca = result.cards.banker;
 
-  // Limpiamos cartas actuales para el inicio de la animación
   gameState.cards.punto = [];
   gameState.cards.banca = [];
 
-  // Determinamos el máximo de cartas repartidas para el loop
   const maxCards = Math.max(finalPunto.length, finalBanca.length);
 
   for (let i = 0; i < maxCards; i++) {
-    // Repartir al Punto si tiene carta en esta posición
     if (finalPunto[i]) {
       gameState.cards.punto.push(finalPunto[i]);
       io.emit("cardsUpdate", gameState.cards);
       await new Promise(r => setTimeout(r, 800));
     }
     
-    // Repartir a la Banca si tiene carta en esta posición
     if (finalBanca[i]) {
       gameState.cards.banca.push(finalBanca[i]);
       io.emit("cardsUpdate", gameState.cards);
@@ -73,7 +71,6 @@ async function resolveGame() {
     }
   }
 
-  // Fin del reparto, mostramos resultado
   gameState.status = "result";
   gameState.winner = result.winner;
   gameState.history.unshift({ winner: result.winner, id: Date.now() });
@@ -83,7 +80,41 @@ async function resolveGame() {
     history: gameState.history 
   });
 
-  setTimeout(startGameLoop, 5000);
+  processPayouts(result.winner);
+
+  // Esperar 5 segundos antes de la siguiente ronda
+  setTimeout(() => {
+    startGameLoop();
+  }, 5000);
+}
+
+function processPayouts(winner) {
+  currentBets.forEach(bet => {
+    let payout = 0;
+    let isWinner = bet.betType === winner;
+    let isRefund = false;
+
+    if (isWinner) {
+      // Caso: El usuario acertó su apuesta
+      if (winner === "Punto") payout = bet.amount * 2;       // Paga 1:1 + devolución
+      if (winner === "Banca") payout = bet.amount * 1.95;    // Paga 0.95:1 + devolución
+      if (winner === "Tie") payout = bet.amount * 9;         // Paga 8:1 + devolución
+    } 
+    else if (winner === "Tie" && (bet.betType === "Punto" || bet.betType === "Banca")) {
+      payout = bet.amount; 
+      isRefund = true;
+    }
+
+    // Enviamos el resultado al socket correspondiente
+    io.to(bet.socketId).emit("betResult", {
+      won: isWinner,
+      refund: isRefund,
+      payout: payout,
+      betType: bet.betType,
+      amount: bet.amount,
+      winner: winner 
+    });
+  });
 }
 
 io.on("connection", (socket) => {
@@ -91,6 +122,20 @@ io.on("connection", (socket) => {
   usersOnline.push(socket.id);
   io.emit("usersOnline", usersOnline.length);  
   
+  socket.on("placeBet", (data) => {
+    if (gameState.status === "betting") {
+      currentBets.push({
+        socketId: socket.id,
+        amount: data.amount,
+        betType: data.betType
+      });
+      console.log(`Apuesta recibida: ${socket.id} apostó ${data.amount} a ${data.betType}`);
+      socket.emit("betAccepted", { status: "success", bet: data });
+    } else {
+      socket.emit("betError", { message: "Apuestas cerradas" });
+    }
+  });
+
   socket.on("chatMessage", (msg) => {
     io.emit("chatMessage", { user: socket.id.substr(0, 5), message: msg });
   });
@@ -98,9 +143,9 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     usersOnline = usersOnline.filter((id) => id !== socket.id);
     io.emit("usersOnline", usersOnline.length);
-
   });
 });
 
 startGameLoop();
-server.listen(3000, () => console.log("Dealer Baccarat en puerto 3001"));
+
+server.listen(3000, () => console.log("Servidor Baccarat corriendo en puerto 3000"));

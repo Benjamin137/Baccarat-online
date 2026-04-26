@@ -5,7 +5,6 @@ export const useSocket = () => {
     const [chatMessages, setChatMessages] = useState([]);
     const [usersOnline, setUsersOnline] = useState(0);
     
-    // Estados del Juego sincronizados
     const [puntoCards, setPuntoCards] = useState([]);
     const [bancaCards, setBancaCards] = useState([]);
     const [timer, setTimer] = useState(0);
@@ -40,17 +39,33 @@ export const useSocket = () => {
             setGameStatus('result');
         });
 
+        socket.on('betResult', (data) => {
+            console.log("Resultado de apuesta recibido:", data);
+        });
+
+        socket.on('betAccepted', (data) => {
+            console.log("Apuesta confirmada en servidor:", data);
+        });
+
+        socket.on('betError', (err) => {
+            console.error("Error en apuesta:", err.message);
+        });
+
         socket.on('chatMessage', (msg) => {
             setChatMessages(prev => [...prev, msg]);
         });
 
         return () => {
             socket.off('gameState');
+            socket.off('usersOnline');
             socket.off('timerUpdate');
             socket.off('statusUpdate');
             socket.off('cardsUpdate');
             socket.off('gameResult');
             socket.off('chatMessage');
+            socket.off('betResult');
+            socket.off('betAccepted');
+            socket.off('betError');
         };
     }, []);
 

@@ -8,7 +8,7 @@ import Mesa from "../components/room/mesa.jsx";
 
 export default function Baccarat() {
   const { 
-    conectar, usersOnline, puntoCards, bancaCards, 
+    conectar, socket, usersOnline, puntoCards, bancaCards, 
     timer, gameStatus, winner, history, chatMessages 
   } = useSocket();
 
@@ -18,9 +18,18 @@ export default function Baccarat() {
 
   useEffect(() => {
     conectar();
+
+    socket.on("betResult", (data) => {
+      if (data.won) {
+        setBalance(prev => prev + data.payout);
+      }
+    });
+
+    return () => {
+      socket.off("betResult");
+    };
   }, []);
 
-  // Limpiar apuestas locales cuando empieza una nueva ronda
   useEffect(() => {
     if (gameStatus === 'betting') {
       setBetAmounts({ punto: 0, banca: 0, tie: 0 });
@@ -34,13 +43,12 @@ export default function Baccarat() {
     setBalance(prev => prev - selectedChip);
     setBetAmounts(prev => ({ ...prev, [type]: prev[type] + selectedChip }));
     
-    // Aquí podrías emitir al servidor la apuesta si quieres que otros la vean
-    // socket.emit('newBet', { type, amount: selectedChip });
+    const betTypeFormatted = type.charAt(0).toUpperCase() + type.slice(1);
+    socket.emit('placeBet', { amount: selectedChip, betType: betTypeFormatted });
   };
 
   const calculateScore = (cards) => {
     if (!cards.length) return 0;
-    // Asumiendo que las cartas del server traen numericValue o valor estándar
     const total = cards.reduce((sum, card) => {
         let val = parseInt(card.value);
         if (isNaN(val)) val = card.value === 'A' ? 1 : 0;
@@ -57,7 +65,6 @@ export default function Baccarat() {
 
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
           <div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
-            {/* Mesa: Recibe todo por props desde el Hook */}
             <Mesa 
               usersOnline={usersOnline} 
               puntoCards={puntoCards} 
